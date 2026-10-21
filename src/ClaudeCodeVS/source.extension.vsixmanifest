@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011">
   <Metadata>
-    <Identity Id="ClaudeCodeVS.7d1c6c0e-3b54-4f0a-9a52-2f6f0c4a9e11" Version="0.4.4" Language="en-US" Publisher="In-house" />
-    <DisplayName>Claude Code for Visual Studio (in-house)</DisplayName>
+    <Identity Id="ClaudeCodeVS.7d1c6c0e-3b54-4f0a-9a52-2f6f0c4a9e11" Version="0.5.0" Language="en-US" Publisher="vedamsudhakar" />
+    <DisplayName>Claude Code for Visual Studio</DisplayName>
     <Description>Launches Claude Code from Visual Studio. No telemetry, no network calls.</Description>
   </Metadata>
   <Installation>

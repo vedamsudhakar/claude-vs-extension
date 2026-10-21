@@ -1,7 +1,7 @@
-# Claude Code for Visual Studio (in-house)
+# Claude Code for Visual Studio
 
 A Visual Studio 2026 extension that runs the Claude Code CLI inside the IDE and connects it to the editor, built
-in-house so no marketplace extension is needed. It has no telemetry and no auto-update, and makes no outbound network
+as a self-contained extension, so no marketplace extension is needed. It has no telemetry and no auto-update, and makes no outbound network
 calls of its own.
 
 ## Features
@@ -34,7 +34,7 @@ dotnet test tests\ClaudeCodeVS.Tests
 Output: `src\ClaudeCodeVS\bin\Release\net48\ClaudeCodeVS.vsix`. Install with VS closed:
 `VSIXInstaller.exe /quiet /admin ClaudeCodeVS.vsix`.
 
-`nuget.config` restricts restore to nuget.org because the default internal feeds can be unreachable. Delete it to use
+`nuget.config` restricts restore to nuget.org because other configured package feeds can be unreachable. Delete it to use
 your own feeds.
 
 ## How it connects to Claude Code
