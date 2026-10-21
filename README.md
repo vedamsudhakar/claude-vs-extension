@@ -9,12 +9,12 @@ calls of its own.
 |---|---|
 | Docked Claude Code terminal | **Tools > Claude Code**, or `Ctrl+Alt+Shift+C` |
 | External terminal (Windows Terminal) | **Tools > Claude Code (External Terminal)**, or `Ctrl+Alt+Shift+E` |
-| New terminal session | **Tools > Claude Code: New Session** |
+| Multiple sessions (up to 5), shown as tabs in the Claude Code window; each runs independently | **+** in the tab strip, or **Tools > Claude Code: New Session**; **✕** on a tab ends that session |
 | Settings (claude path, extra arguments, shell, external terminal, font size) | **Tools > Options > Claude Code** |
 | Click a file path in the terminal (`src/Foo.cs:42`, `Foo.cs(12,5)`, `C:\x\Foo.cs`) | opens it in the VS editor at that line |
 | Add a file to Claude | Solution Explorer context menu **Add File to Claude** |
 | Activity log | Output window > **Claude Code** pane |
-| Send file + selected lines to Claude as an @-mention | `Ctrl+Alt+K`, or editor context menu **Send Selection to Claude** |
+| Send file + selected lines to Claude as an @-mention (goes to the selected session tab) | `Ctrl+Alt+K`, or editor context menu **Send Selection to Claude** |
 | Claude opens files / ranges in the editor | automatic (`openFile`) |
 | Claude's edits appear in VS's diff viewer with **Accept / Reject** (you can edit the right side first) | automatic (`openDiff`) |
 | Claude sees your current selection and open files | automatic (`selection_changed`, `getOpenEditors`, ...) |
@@ -40,7 +40,9 @@ your own feeds.
 ## How it connects to Claude Code
 The extension starts a WebSocket MCP server and writes `~/.claude/ide/<port>.lock`, the same mechanism the official
 IDE integrations use. Processes it launches get `CLAUDE_CODE_SSE_PORT` and `ENABLE_IDE_INTEGRATION=true`, so
-`claude` connects to this IDE directly; `/ide` shows it.
+`claude` connects to this IDE directly; `/ide` shows it. Each docked session tab has its own server and lock file
+(listed by `/ide` as "Visual Studio (Session N)"), so @-mentions and diff tabs stay with the session they belong to;
+external terminals use the default "Visual Studio" entry.
 
 **This protocol is not officially documented by Anthropic.** It was reconstructed from public implementations
 (for example `coder/claudecode.nvim` `PROTOCOL.md`). A Claude Code update could change it; all of it lives in

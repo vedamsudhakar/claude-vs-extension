@@ -13,11 +13,14 @@ namespace ClaudeCodeVS.Bridge
         private readonly string _path;
         private readonly int _port;
         private readonly string _authToken;
+        private readonly string _ideName;
 
-        public LockFile(int port, string authToken)
+        /// <param name="ideName">Shown by /ide; must start with "Visual Studio" so <see cref="CleanStale"/> recognises it.</param>
+        public LockFile(int port, string authToken, string ideName = "Visual Studio")
         {
             _port = port;
             _authToken = authToken;
+            _ideName = ideName;
             var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".claude", "ide");
             Directory.CreateDirectory(dir);
             _path = Path.Combine(dir, port + ".lock");
@@ -31,7 +34,7 @@ namespace ClaudeCodeVS.Bridge
             {
                 ["pid"] = Process.GetCurrentProcess().Id,
                 ["workspaceFolders"] = new JArray(workspaceFolders),
-                ["ideName"] = "Visual Studio",
+                ["ideName"] = _ideName,
                 ["transport"] = "ws",
                 ["runningInWindows"] = true,
                 ["authToken"] = _authToken,
@@ -54,7 +57,7 @@ namespace ClaudeCodeVS.Bridge
                 try
                 {
                     var obj = JObject.Parse(File.ReadAllText(file));
-                    if (!string.Equals((string)obj["ideName"], "Visual Studio", StringComparison.Ordinal)) continue;
+                    if (((string)obj["ideName"])?.StartsWith("Visual Studio", StringComparison.Ordinal) != true) continue;
                     var pid = (int?)obj["pid"];
                     if (pid == null || IsAlive(pid.Value)) continue;
                     File.Delete(file);

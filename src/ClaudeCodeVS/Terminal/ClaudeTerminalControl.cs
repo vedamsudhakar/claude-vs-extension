@@ -15,7 +15,7 @@ using Newtonsoft.Json.Linq;
 
 namespace ClaudeCodeVS.Terminal
 {
-    /// <summary>xterm.js (in WebView2) bound to a ConPTY session running Claude Code.</summary>
+    /// <summary>xterm.js (in WebView2) bound to a ConPTY session running Claude Code, with its own IDE bridge endpoint.</summary>
     internal sealed class ClaudeTerminalControl : UserControl, IDisposable
     {
         private const string VirtualHost = "claude.local";
@@ -28,9 +28,21 @@ namespace ClaudeCodeVS.Terminal
         private bool _flushQueued, _exited, _initStarted;
         private short _cols = 120, _rows = 30;
         private string _cwd;
+        private Bridge.BridgeEndpoint _endpoint;
 
-        public ClaudeTerminalControl()
+        /// <summary>Tab number (1-based) shown in the session strip, lock file and diff captions.</summary>
+        public int Number { get; }
+
+        /// <summary>This session's bridge endpoint, or null when the IDE bridge is unavailable.</summary>
+        public Bridge.BridgeEndpoint Endpoint => _endpoint;
+
+        /// <summary>True while the Claude process is alive.</summary>
+        public bool IsRunning => _session != null && !_exited;
+
+        public ClaudeTerminalControl(int number)
         {
+            Number = number;
+            EnsureEndpoint();
             Content = _web;
             _web.CreationProperties = new CoreWebView2CreationProperties
             {
@@ -107,8 +119,10 @@ namespace ClaudeCodeVS.Terminal
             var cwd = Bridge.WorkspaceLocator.GetRoot() ?? Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
             _cwd = cwd;
             var env = new Dictionary<string, string> { ["ENABLE_IDE_INTEGRATION"] = "true", ["COLORTERM"] = "truecolor", ["TERM_PROGRAM"] = "VisualStudio" };
-            var host = Bridge.IdeBridgeHost.Current;
-            if (host != null) env["CLAUDE_CODE_SSE_PORT"] = host.Port.ToString();
+            // The bridge starts in the background with the package; it may not have existed when this tab was created.
+            if (_endpoint == null && EnsureEndpoint() && IsVisible && Bridge.IdeBridgeHost.Current != null)
+                Bridge.IdeBridgeHost.Current.ActiveSession = _endpoint;
+            if (_endpoint != null) env["CLAUDE_CODE_SSE_PORT"] = _endpoint.Port.ToString();
             try
             {
                 var session = ConPtySession.Start(ShellLauncher.DockedCommandLine(ClaudeCodePackage.Options), cwd, env, _cols, _rows);
@@ -121,6 +135,14 @@ namespace ClaudeCodeVS.Terminal
                 _exited = true;
                 Post(new JObject { ["t"] = "output", ["d"] = "\r\nCould not start Claude Code: " + ex.Message + "\r\nPress Enter to retry.\r\n" });
             }
+        }
+
+        private bool EnsureEndpoint()
+        {
+            if (_endpoint != null) return true;
+            try { _endpoint = Bridge.IdeBridgeHost.Current?.CreateSession(Number); }
+            catch (Exception ex) { Log.Info("Session " + Number + " bridge failed to start: " + ex.Message); }
+            return _endpoint != null;
         }
 
         private void OnExited()
@@ -222,15 +244,6 @@ namespace ClaudeCodeVS.Terminal
                 Process.Start(new ProcessStartInfo(u.AbsoluteUri) { UseShellExecute = true });
         }
 
-        /// <summary>Ends the current process (if any), clears the screen and starts a fresh Claude session.</summary>
-        public void RestartSession()
-        {
-            _session?.Dispose();
-            _session = null;
-            Post(new JObject { ["t"] = "output", ["d"] = "\x1b[2J\x1b[3J\x1b[H" });
-            StartSession();
-        }
-
         public void FocusTerminal()
         {
             _web.Focus();
@@ -243,6 +256,8 @@ namespace ClaudeCodeVS.Terminal
             Options.GeneralOptions.Applied -= OnOptionsApplied;
             _session?.Dispose();
             _session = null;
+            Bridge.IdeBridgeHost.Current?.ReleaseSession(_endpoint);
+            _endpoint = null;
             _web.Dispose();
         }
     }

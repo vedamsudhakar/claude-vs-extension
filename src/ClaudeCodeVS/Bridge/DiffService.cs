@@ -16,13 +16,25 @@ namespace ClaudeCodeVS.Bridge
 {
     /// <summary>
     /// Shows Claude's proposed edit in VS's diff viewer with an Accept / Reject info bar. openDiff blocks
-    /// until the user decides; closing the diff tab counts as a rejection.
+    /// until the user decides; closing the diff tab counts as a rejection. One instance per bridge endpoint, so a
+    /// Claude session only ever replaces or closes its own diffs.
     /// </summary>
-    internal static class DiffService
+    internal sealed class DiffService
     {
-        private static readonly ConcurrentDictionary<string, DiffSession> Sessions = new ConcurrentDictionary<string, DiffSession>();
+        private readonly ConcurrentDictionary<string, DiffSession> _sessions = new ConcurrentDictionary<string, DiffSession>();
+        private readonly string _caption;
 
-        public static IEnumerable<ITool> CreateTools()
+        /// <param name="caption">Diff window title prefix, e.g. "Claude" or "Claude 2".</param>
+        public DiffService(string caption) => _caption = caption;
+
+        /// <summary>Rejects and closes every open diff (the owning session is going away). UI thread only.</summary>
+        public void CloseAll()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            foreach (var s in _sessions.Values.ToList()) s.Finish(accepted: false, closeFrame: true);
+        }
+
+        public IEnumerable<ITool> CreateTools()
         {
             yield return new DelegateTool("openDiff", "Open a diff view of the proposed change and wait for the user to accept or reject it.",
                 new JObject
@@ -48,7 +60,7 @@ namespace ClaudeCodeVS.Bridge
                 async a =>
                 {
                     await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                    if (Sessions.TryGetValue((string)a["tab_name"], out var s)) s.Finish(accepted: false, closeFrame: true);
+                    if (_sessions.TryGetValue((string)a["tab_name"], out var s)) s.Finish(accepted: false, closeFrame: true);
                     return "TAB_CLOSED";
                 });
             yield return new DelegateTool("closeAllDiffTabs", "Close all diff tabs.",
@@ -56,13 +68,13 @@ namespace ClaudeCodeVS.Bridge
                 async _ =>
                 {
                     await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                    var all = Sessions.Values.ToList();
+                    var all = _sessions.Values.ToList();
                     foreach (var s in all) s.Finish(accepted: false, closeFrame: true);
                     return "CLOSED_" + all.Count + "_DIFF_TABS";
                 });
         }
 
-        private static async Task<string> OpenDiffAsync(JObject a)
+        private async Task<string> OpenDiffAsync(JObject a)
         {
             var oldPath = (string)a["old_file_path"];
             var newPath = (string)a["new_file_path"];
@@ -70,19 +82,19 @@ namespace ClaudeCodeVS.Bridge
             var tabName = (string)a["tab_name"] ?? Path.GetFileName(newPath);
 
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-            if (Sessions.TryRemove(tabName, out var previous)) previous.Finish(accepted: false, closeFrame: true);
+            if (_sessions.TryRemove(tabName, out var previous)) previous.Finish(accepted: false, closeFrame: true);
 
-            var session = new DiffSession(tabName, oldPath, newPath, contents, () => Sessions.TryRemove(tabName, out _));
-            Sessions[tabName] = session;
+            var session = new DiffSession(_caption, oldPath, newPath, contents, () => _sessions.TryRemove(tabName, out _));
+            _sessions[tabName] = session;
             try { session.Show(); }
-            catch (Exception) { Sessions.TryRemove(tabName, out _); session.Cleanup(); throw; }
+            catch (Exception) { _sessions.TryRemove(tabName, out _); session.Cleanup(); throw; }
             var accepted = await session.Result.Task.ConfigureAwait(false);
             return accepted ? "FILE_SAVED" : "DIFF_REJECTED";
         }
 
         private sealed class DiffSession : IVsInfoBarUIEvents, IVsWindowFrameNotify
         {
-            private readonly string _tabName, _oldPath, _newPath, _contents;
+            private readonly string _caption, _oldPath, _newPath, _contents;
             private readonly Action _onDone;
             private readonly string _tempDir;
             private readonly string _tempOld, _tempNew;
@@ -93,9 +105,9 @@ namespace ClaudeCodeVS.Bridge
 
             public TaskCompletionSource<bool> Result { get; } = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-            public DiffSession(string tabName, string oldPath, string newPath, string contents, Action onDone)
+            public DiffSession(string caption, string oldPath, string newPath, string contents, Action onDone)
             {
-                _tabName = tabName; _oldPath = oldPath; _newPath = newPath; _contents = contents; _onDone = onDone;
+                _caption = caption; _oldPath = oldPath; _newPath = newPath; _contents = contents; _onDone = onDone;
                 _tempDir = Path.Combine(Path.GetTempPath(), "ClaudeCodeVS", Guid.NewGuid().ToString("N"));
                 Directory.CreateDirectory(_tempDir);
                 var name = Path.GetFileName(newPath);
@@ -114,8 +126,8 @@ namespace ClaudeCodeVS.Bridge
 
                 var svc = (IVsDifferenceService)Package.GetGlobalService(typeof(SVsDifferenceService));
                 var name = Path.GetFileName(_newPath);
-                _frame = svc.OpenComparisonWindow2(_tempOld, _tempNew, "Claude: " + name, _newPath,
-                    "Current", "Proposed by Claude", "Claude: " + name, null,
+                _frame = svc.OpenComparisonWindow2(_tempOld, _tempNew, _caption + ": " + name, _newPath,
+                    "Current", "Proposed by Claude", _caption + ": " + name, null,
                     (uint)(__VSDIFFSERVICEOPTIONS.VSDIFFOPT_LeftFileIsTemporary | __VSDIFFSERVICEOPTIONS.VSDIFFOPT_RightFileIsTemporary));
                 _frame.Show();
                 AddInfoBar();
@@ -129,7 +141,7 @@ namespace ClaudeCodeVS.Bridge
                     || !(hostObj is IVsInfoBarHost host)) return;
                 var factory = (IVsInfoBarUIFactory)Package.GetGlobalService(typeof(SVsInfoBarUIFactory));
                 var model = new InfoBarModel(
-                    new[] { new InfoBarTextSpan("Claude wants to change " + Path.GetFileName(_newPath) + ". You can edit the right side before accepting. ") },
+                    new[] { new InfoBarTextSpan(_caption + " wants to change " + Path.GetFileName(_newPath) + ". You can edit the right side before accepting. ") },
                     new IVsInfoBarActionItem[] { new InfoBarButton("Accept"), new InfoBarButton("Reject") },
                     KnownMonikers.StatusInformation, isCloseButtonVisible: false);
                 _infoBar = factory.CreateInfoBar(model);
