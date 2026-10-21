@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'" />
+<link rel="stylesheet" href="xterm.css" />
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #1e1e1e; }
+  #term { position: absolute; inset: 4px 0 0 6px; }
+  /* xterm forces overflow-y:scroll, which shows an empty scrollbar track even with nothing to scroll. */
+  .xterm .xterm-viewport { overflow-y: auto !important; scrollbar-width: thin; scrollbar-color: #5a5a5a transparent; }
+  .xterm .xterm-viewport::-webkit-scrollbar { width: 8px; }
+  .xterm .xterm-viewport::-webkit-scrollbar-thumb { background: #5a5a5a; border-radius: 4px; }
+  .xterm .xterm-viewport::-webkit-scrollbar-track { background: transparent; }
+</style>
+</head>
+<body>
+<div id="term"></div>
+<script src="xterm.js"></script>
+<script src="addon-fit.js"></script>
+<script src="addon-web-links.js"></script>
+<script src="terminal.js"></script>
+</body>
+</html>

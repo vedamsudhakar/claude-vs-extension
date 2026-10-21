@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CommandTable xmlns="http://schemas.microsoft.com/VisualStudio/2005-10-18/CommandTable" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <Extern href="stdidcmd.h" />
+  <Extern href="vsshlids.h" />
+  <Commands package="guidClaudeCodePackage">
+    <Groups>
+      <Group guid="guidClaudeCodeCmdSet" id="EditorContextGroup" priority="0x0600">
+        <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_CODEWIN" />
+      </Group>
+      <Group guid="guidClaudeCodeCmdSet" id="ItemContextGroup" priority="0x0600">
+        <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_ITEMNODE" />
+      </Group>
+    </Groups>
+    <Buttons>
+      <Button guid="guidClaudeCodeCmdSet" id="AddFileCommandId" priority="0x0100" type="Button">
+        <Parent guid="guidClaudeCodeCmdSet" id="ItemContextGroup" />
+        <Strings>
+          <ButtonText>Add File to Claude</ButtonText>
+        </Strings>
+      </Button>
+      <Button guid="guidClaudeCodeCmdSet" id="SendSelectionCommandId" priority="0x0100" type="Button">
+        <Parent guid="guidClaudeCodeCmdSet" id="EditorContextGroup" />
+        <Strings>
+          <ButtonText>Send Selection to Claude</ButtonText>
+        </Strings>
+      </Button>
+      <Button guid="guidClaudeCodeCmdSet" id="OpenWindowCommandId" priority="0x0100" type="Button">
+        <Parent guid="guidSHLMainMenu" id="IDG_VS_MM_TOOLSADDINS" />
+        <Strings>
+          <ButtonText>Claude Code</ButtonText>
+        </Strings>
+      </Button>
+      <Button guid="guidClaudeCodeCmdSet" id="NewSessionCommandId" priority="0x0102" type="Button">
+        <Parent guid="guidSHLMainMenu" id="IDG_VS_MM_TOOLSADDINS" />
+        <Strings>
+          <ButtonText>Claude Code: New Session</ButtonText>
+        </Strings>
+      </Button>
+      <Button guid="guidClaudeCodeCmdSet" id="LaunchExternalCommandId" priority="0x0101" type="Button">
+        <Parent guid="guidSHLMainMenu" id="IDG_VS_MM_TOOLSADDINS" />
+        <Strings>
+          <ButtonText>Claude Code (External Terminal)</ButtonText>
+        </Strings>
+      </Button>
+    </Buttons>
+  </Commands>
+  <CommandPlacements>
+    <!-- Also show the window under View > Other Windows. -->
+    <CommandPlacement guid="guidClaudeCodeCmdSet" id="OpenWindowCommandId" priority="0x0100">
+      <Parent guid="guidSHLMainMenu" id="IDG_VS_WNDO_OTRWNDWS1" />
+    </CommandPlacement>
+  </CommandPlacements>
+  <KeyBindings>
+    <!-- Ctrl+Alt+C is Debug.CallStack in VS's default profile, so the launch shortcuts use Ctrl+Alt+Shift. -->
+    <KeyBinding guid="guidClaudeCodeCmdSet" id="OpenWindowCommandId" editor="guidVSStd97" key1="C" mod1="Control Alt Shift" />
+    <KeyBinding guid="guidClaudeCodeCmdSet" id="LaunchExternalCommandId" editor="guidVSStd97" key1="E" mod1="Control Alt Shift" />
+    <KeyBinding guid="guidClaudeCodeCmdSet" id="SendSelectionCommandId" editor="guidVSStd97" key1="K" mod1="Control Alt" />
+  </KeyBindings>
+  <Symbols>
+    <GuidSymbol name="guidClaudeCodePackage" value="{5b1f6a7e-8c2d-4e39-9a41-0d7c3f2b6e10}" />
+    <GuidSymbol name="guidClaudeCodeCmdSet" value="{c3a9d1f4-6b72-4d85-8e0a-1f5b7a9c2d34}">
+      <IDSymbol name="LaunchExternalCommandId" value="0x0100" />
+      <IDSymbol name="SendSelectionCommandId" value="0x0101" />
+      <IDSymbol name="OpenWindowCommandId" value="0x0102" />
+      <IDSymbol name="NewSessionCommandId" value="0x0103" />
+      <IDSymbol name="AddFileCommandId" value="0x0104" />
+      <IDSymbol name="ItemContextGroup" value="0x1001" />
+      <IDSymbol name="EditorContextGroup" value="0x1000" />
+    </GuidSymbol>
+  </Symbols>
+</CommandTable>
