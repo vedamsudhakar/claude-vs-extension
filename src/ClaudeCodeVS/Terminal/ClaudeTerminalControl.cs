@@ -39,6 +39,12 @@ namespace ClaudeCodeVS.Terminal
         /// <summary>True while the Claude process is alive.</summary>
         public bool IsRunning => _session != null && !_exited;
 
+        /// <summary>Session name from the terminal title Claude sets, or null until it sets one.</summary>
+        public string SessionTitle { get; private set; }
+
+        /// <summary>Raised on the UI thread when <see cref="SessionTitle"/> changes.</summary>
+        public event Action TitleChanged;
+
         public ClaudeTerminalControl(int number)
         {
             Number = number;
@@ -106,6 +112,9 @@ namespace ClaudeCodeVS.Terminal
                 case "openLink":
                     OpenLink((string)m["url"]);
                     break;
+                case "title":
+                    SetTitle((string)m["title"]);
+                    break;
                 case "openFile":
                     OpenFileReference((string)m["ref"]);
                     break;
@@ -135,6 +144,19 @@ namespace ClaudeCodeVS.Terminal
                 _exited = true;
                 Post(new JObject { ["t"] = "output", ["d"] = "\r\nCould not start Claude Code: " + ex.Message + "\r\nPress Enter to retry.\r\n" });
             }
+        }
+
+        // Status glyphs Claude puts in front of the title (spinner frames, ✳ and similar) are not part of the name.
+        private static readonly System.Text.RegularExpressions.Regex TitlePrefix = new System.Text.RegularExpressions.Regex(@"^[^\p{L}\p{N}]+");
+
+        private void SetTitle(string raw)
+        {
+            var title = TitlePrefix.Replace(raw ?? "", "").Trim();
+            // The hosting shell titles the console after itself ("C:\Windows\system32\cmd.exe - claude"); not a session name.
+            if (title.IndexOf(".exe", StringComparison.OrdinalIgnoreCase) >= 0 || title.Length == 0) return;
+            if (title == SessionTitle) return;
+            SessionTitle = title;
+            TitleChanged?.Invoke();
         }
 
         private bool EnsureEndpoint()

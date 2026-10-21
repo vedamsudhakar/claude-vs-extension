@@ -1,4 +1,4 @@
-// Glue between xterm.js and the VS host. Messages to host: ready, input, resize, openLink.
+// Glue between xterm.js and the VS host. Messages to host: ready, input, resize, openLink, openFile, title.
 // Messages from host: output, theme, focus.
 (function () {
   const host = window.chrome.webview;
@@ -77,6 +77,8 @@
 
   term.onData((d) => post({ t: 'input', d }));
   term.onResize((s) => post({ t: 'resize', cols: s.cols, rows: s.rows }));
+  // Terminal title set by the CLI (OSC 0/2); the host shows it as the session tab name.
+  term.onTitleChange((title) => post({ t: 'title', title }));
 
   const refit = () => { try { fit.fit(); } catch (_) { /* hidden */ } };
   new ResizeObserver(refit).observe(document.getElementById('term'));

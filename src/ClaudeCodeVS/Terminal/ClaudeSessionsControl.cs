@@ -116,11 +116,21 @@ namespace ClaudeCodeVS.Terminal
             panel.Children.Add(label);
             panel.Children.Add(close);
             var tab = new Border { Child = panel, Padding = new Thickness(8, 3, 4, 3), Cursor = Cursors.Hand, ToolTip = "Claude session " + term.Number };
+            term.TitleChanged += () =>
+            {
+                label.Text = TabText(term.SessionTitle) ?? "Session " + term.Number;
+                tab.ToolTip = "Claude session " + term.Number + (term.SessionTitle != null ? ": " + term.SessionTitle : "");
+            };
             tab.MouseLeftButtonUp += (s, e) => { if (_active != term) Select(term, focus: true); else term.FocusTerminal(); };
             tab.MouseEnter += (s, e) => { if (_active != term) tab.SetResourceReference(Border.BackgroundProperty, EnvironmentColors.ToolWindowTabMouseOverBackgroundBeginBrushKey); };
             tab.MouseLeave += (s, e) => StyleTab(tab, _active == term);
             return tab;
         }
+
+        private const int MaxTabText = 24;
+
+        private static string TabText(string title) =>
+            string.IsNullOrEmpty(title) ? null : title.Length <= MaxTabText ? title : title.Substring(0, MaxTabText - 1).TrimEnd() + "…";
 
         private static void StyleTab(Border tab, bool selected)
         {
