@@ -32,7 +32,8 @@ MSBuild ClaudeCodeVS.sln -restore -p:Configuration=Release
 dotnet test tests\ClaudeCodeVS.Tests
 ```
 Output: `src\ClaudeCodeVS\bin\Release\net48\ClaudeCodeVS.vsix`. Install with VS closed:
-`VSIXInstaller.exe /quiet /admin ClaudeCodeVS.vsix`.
+`.\install.ps1` (newest built VSIX), `.\install.ps1 -Build` (rebuild Release first) or `.\install.ps1 -Uninstall`.
+It installs into every compatible VS instance via `VSIXInstaller.exe /quiet`.
 
 `nuget.config` restricts restore to nuget.org because other configured package feeds can be unreachable. Delete it to use
 your own feeds.
