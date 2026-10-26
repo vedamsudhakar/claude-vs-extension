@@ -95,7 +95,7 @@ if ($Uninstall) {
     $result = Invoke-VsixInstaller @('/quiet', "/uninstall:$ExtensionId")
     switch ($result.ExitCode) {
         0       { Write-Host 'Uninstalled.' -ForegroundColor Green }
-        2003    { Write-Host 'The extension is not installed.' -ForegroundColor Yellow }
+        1002    { Write-Host 'The extension is not installed.' -ForegroundColor Yellow }
         default { Fail "Uninstall failed (exit code $($result.ExitCode)). Log: $($result.Log)" }
     }
     exit 0
