@@ -9,7 +9,7 @@
     fontFamily: '"Cascadia Mono", Consolas, monospace',
     fontSize: 13,
     scrollback: 10000,
-    allowProposedApi: false,
+    allowProposedApi: true, // term.unicode (for the Unicode 11 width tables below) is a proposed API in xterm 5
     macOptionIsMeta: false,
     theme: { background: '#1e1e1e', foreground: '#d4d4d4' },
     // Hyperlinks the CLI emits itself (OSC 8), e.g. file paths that wrap over several rows. xterm's default handler
@@ -34,6 +34,10 @@
   term.loadAddon(fit);
   // Only http(s) links are forwarded to the host, which opens them in the default browser.
   term.loadAddon(new WebLinksAddon.WebLinksAddon((e, uri) => post({ t: 'openLink', url: uri })));
+  // The CLI measures emoji such as ✅ as two cells; xterm's default Unicode 6 tables count one, which shifts table
+  // borders and leaves stray glyphs behind when the CLI redraws. Use the Unicode 11 widths so both agree.
+  term.loadAddon(new Unicode11Addon.Unicode11Addon());
+  term.unicode.activeVersion = '11';
   term.open(document.getElementById('term'));
 
   // File links: "src/Foo.cs", "src\Foo.cs:42", "C:\x\Foo.cs:42:7", "Foo.cs(42,7)". Clicking asks the host to open the

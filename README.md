@@ -57,7 +57,7 @@ external terminals use the default "Visual Studio" entry.
   stale files from dead VS processes are cleaned up.
 * The extension executes only `claude` (via `cmd.exe`) and opens `http(s)` links clicked in the terminal in the default
   browser. It writes files only when the user clicks **Accept** in the diff viewer (target = the path Claude supplied).
-* Third-party code: **xterm.js 5.5.0**, `addon-fit` 0.10.0, `addon-web-links` 0.11.0 (MIT), bundled in
+* Third-party code: **xterm.js 5.5.0**, `addon-fit` 0.10.0, `addon-web-links` 0.11.0, `addon-unicode11` 0.8.0 (MIT), bundled in
   `src/ClaudeCodeVS/web`, loaded from the extension folder via a WebView2 virtual host with a strict CSP; no CDN.
   Microsoft packages: VS SDK, WebView2 (runtime supplied by VS/Windows).
 * The terminal child (and everything it spawns) is placed in a kill-on-close job object, so nothing outlives VS.
