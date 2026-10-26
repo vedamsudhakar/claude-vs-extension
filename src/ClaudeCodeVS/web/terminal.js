@@ -1,4 +1,4 @@
-// Glue between xterm.js and the VS host. Messages to host: ready, input, resize, openLink, openFile, title.
+// Glue between xterm.js and the VS host. Messages to host: ready, input, resize, openLink, openFile, title, clipboard.
 // Messages from host: output, theme, focus.
 (function () {
   const host = window.chrome.webview;
@@ -66,12 +66,36 @@
   });
 
   // Ctrl+C copies when text is selected; otherwise it is sent to the process as an interrupt.
+  // Ctrl+V pastes: xterm would otherwise send ^V (0x16) and cancel the keydown, so the browser never fires 'paste'.
+  // Returning false lets the default action run and xterm's paste handler delivers the text (bracketed if enabled).
   term.attachCustomKeyEventHandler((e) => {
-    if (e.type === 'keydown' && e.ctrlKey && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'c' && term.hasSelection()) {
+    if (e.type !== 'keydown' || !e.ctrlKey || e.shiftKey || e.altKey || e.metaKey) return true;
+    const k = e.key.toLowerCase();
+    if (k === 'c' && term.hasSelection()) {
       navigator.clipboard.writeText(term.getSelection());
       term.clearSelection();
       return false;
     }
+    return k !== 'v';
+  });
+
+  // OSC 52 ("ESC ]52;c;<base64> BEL"): Claude copies its own mouse selection this way. xterm ignores it unless handled;
+  // the host sets the Windows clipboard (navigator.clipboard needs page focus and a user gesture). "?" is a read query.
+  // Only honoured shortly after a mouse release or keypress in the terminal, so text that merely scrolls past
+  // (a cat'ed file, a log, fetched content) cannot silently replace the clipboard.
+  const OSC52_WINDOW_MS = 2000;
+  let lastGesture = 0;
+  const termEl = document.getElementById('term');
+  const markGesture = () => { lastGesture = Date.now(); };
+  termEl.addEventListener('mouseup', markGesture, true);
+  termEl.addEventListener('keydown', markGesture, true);
+  term.parser.registerOscHandler(52, (data) => {
+    const b64 = data.slice(data.indexOf(';') + 1);
+    if (b64 === '?' || Date.now() - lastGesture > OSC52_WINDOW_MS) return true;
+    try {
+      const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+      post({ t: 'clipboard', text: new TextDecoder().decode(bytes) });
+    } catch (_) { /* malformed base64 */ }
     return true;
   });
 

@@ -118,6 +118,9 @@ namespace ClaudeCodeVS.Terminal
                 case "openFile":
                     OpenFileReference((string)m["ref"]);
                     break;
+                case "clipboard":
+                    SetClipboard((string)m["text"]);
+                    break;
             }
         }
 
@@ -258,6 +261,22 @@ namespace ClaudeCodeVS.Terminal
                 if (File.Exists(candidate)) return candidate;
             }
             return null;
+        }
+
+        // Text the CLI copied via OSC 52. The clipboard can be briefly locked by another process, so retry a few times.
+        private static void SetClipboard(string text)
+        {
+            if (string.IsNullOrEmpty(text)) return;
+            for (var attempt = 0; ; attempt++)
+            {
+                try { Clipboard.SetDataObject(text, true); return; }
+                catch (System.Runtime.InteropServices.COMException ex) when (attempt < 4)
+                {
+                    Log.Info("Clipboard busy, retrying: " + ex.Message);
+                    System.Threading.Thread.Sleep(50);
+                }
+                catch (Exception ex) { Log.Info("Could not set clipboard: " + ex.Message); return; }
+            }
         }
 
         private static void OpenLink(string url)
